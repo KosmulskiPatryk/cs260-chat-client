@@ -1,6 +1,7 @@
 #include "ConnectionManager.h"
 #include "json.hpp"
 
+
 std::thread ConnectionManager::m_recvThread;
 std::mutex ConnectionManager::m_mutex;
 
@@ -11,10 +12,38 @@ std::string ConnectionManager::m_recvBuffer;
 
 void ConnectionManager::Connect(const std::string& ip, int port) {
     // TODO: create a TCP socket
+	sock = socket(AF_INET,	SOCK_STREAM,IPPROTO_TCP);
+
 	// TODO: set the socket address to ip, port
+	memset(addr.sin_zero, 0, sizeof(addr.sin_zero));
+	addr.sin_family = AF_INET;	/*Address family*/
+	addr.sin_port = htons(port);	/*The Host->Network port in the type: short*/
+	//Converts IPv4 to its binary form
+	int result = inet_pton(
+		addr.sin_family,ip.c_str(),&addr.sin_addr
+	);
+	//Checking is its an IP or DNS name
+	if (result != 1) {// 0 For non-IP strings, -1 for other errors
+		ADDRINFOA hint;
+		PADDRINFOA pAddr;
+		memset(&hint, 0, sizeof(ADDRINFOA));
+		hint.ai_family = AF_INET;
+		result = getaddrinfo(ip.c_str(), nullptr, &hint, &pAddr);
+		if (result != 0) {
+			return;
+		}
+		else {
+			addr.sin_addr = ((SOCKADDR_IN*)pAddr->ai_addr)->sin_addr;
+			freeaddrinfo(pAddr);
+		}
+	}
+
 	// TODO: make the socket non-blocking
+	u_long mode = 1;
+	ioctlsocket(sock, FIONBIO, &mode);
 	// TODO: connect to the server, don't forget to verify all return values for success!
-	
+	int res = connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+
     // create a thread that will run ConnectionManager::RecvLoop and detach it
 	m_recvThread = std::thread(&ConnectionManager::RecvLoop);
 	if (m_recvThread.joinable()) m_recvThread.detach();
@@ -42,6 +71,26 @@ void ConnectionManager::Disconnect() {
 void ConnectionManager::Send(const std::string& message) {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	m_sendQueue.push(message);
+}
+
+bool ConnectionManager::ValidatePort(int port)
+{
+	std::string str_port = std::to_string(port);
+	for (int i = 0; i < static_cast<int>(str_port.size()); ++i) {
+		if (isalpha(str_port[i])) {
+			return false;
+		}
+	}
+	if (port < 1 || port > 65535) {
+		return false;
+
+	}
+	return true;
+}
+
+bool ConnectionManager::ValidateIP(const std::string ip)
+{
+	return true;
 }
 
 std::optional<std::string> ConnectionManager::Poll() {
