@@ -3,6 +3,7 @@
 #include "clay.h"
 #include <string>
 #include "ConnectionManager.h"
+#include <chrono>
 
 ChatRoomScreen::ChatRoomScreen() {
     this->m_messageInput.m_placeholder = "Enter your message...";
@@ -16,9 +17,16 @@ ChatRoomScreen::ChatRoomScreen() {
         if (!ConnectionManager::m_running) return;
 
         // TODO: build a message of type CHAT
+        std::string user = ConnectionManager::GetUser();
+        std::string content = m_messageInput.m_content;
+        //std::cout << ms << '\n';  // 1705314600123
+        int64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
 
+        Message msg(user, content, timestamp);
+        m_messageHistory.push_back(msg);
         // TODO: send the message using ConnectionManager::Send
-        
+        ConnectionManager::Send(msg.ToJstonString());
 		// reset the text input
         this->m_messageInput.m_content = "";
         this->m_messageInput.m_cursorPos = 0;
@@ -29,8 +37,44 @@ void ChatRoomScreen::PacketHandler(const nlohmann::json& packet) {
     const std::string& packetType = packet["type"];
     // TODO: handle incoming packets by packetType
     // See documentation for each message type and how to handle it
-    if (packetType == "ERROR") {
-        this->m_errorAlert.Push(packet["reason"]);
+    if (packetType == "MESSAGE") {
+            std::string user = packet["user"];
+            std::string content = packet["content"];
+            int64_t timestamp = packet["timestamp"];
+            Message msg(user, content, timestamp);
+            m_messageHistory.push_back(msg);
+    }
+    else if (packetType == "SYSTEM") {
+        std::string content = packet["content"];
+        int64_t timestamp = packet["timestamp"];
+        Message msg("SYSTEM", content, timestamp);
+        m_messageHistory.push_back(msg);
+
+    }
+    else if (packetType == "CONNECTED_USERS") {
+        m_connectedUsers = packet["users"];
+    }
+    else if (packetType == "MESSAGE_HISTORY") {
+        if (packet["messages"].is_array()) {
+            int size = packet["messages"].size();
+            for (int i = 0; i < size; ++i) {
+                const std::string user = packet["messages"][i]["user"];
+                const std::string content = packet["messages"][i]["content"];
+                int64_t timestamp = packet["messages"][i]["timestamp"];
+                Message msg(user,content,timestamp);
+                m_messageHistory.push_back(msg);
+
+            }
+        }
+    }
+    else if (packetType == "PING") {
+        nlohmann::json message;
+        message["type"] = "PONG";
+        ConnectionManager::Send(nlohmann::to_string(message));
+    }
+
+    else if (packetType == "ERROR") {
+            this->m_errorAlert.Push(packet["reason"]);
     }
 }
 
@@ -38,6 +82,11 @@ void ChatRoomScreen::Update(float dt) {
     // TODO: use ConnectionManager to poll for incoming messages
 	// For all received, parse the json and send to PacketHandler for handling
 
+    std::string incomingJsonStr = ConnectionManager::Poll().value_or("");
+    if (!incomingJsonStr.empty()) {
+        nlohmann::json incoming = nlohmann::json::parse(incomingJsonStr);
+        PacketHandler(incoming);
+    }
 
 
     // detect manual scroll
@@ -280,4 +329,34 @@ void ChatRoomScreen::Draw() {
 void ChatRoomScreen::EndFrame() {
     this->m_messageInput.UpdateBBOX();
     this->m_sendButton.UpdateBBOX();
+}
+
+std::string ChatRoomScreen::Message::WriteJsonMessage(const std::string _user, const std::string _content, int64_t _timestamp)
+{
+//    std::string user = packet["user"];
+//    std::string content = packet["content"];
+//    int64_t timestamp = packet["timestamp"];
+//    Message msg(user, content, timestamp);
+    nlohmann::json message;
+    message["type"] = "MESSAGE";
+    message["user"] = _user;
+    message["content"] = _content;
+    message["timestamp"] = _timestamp;
+    
+
+    return nlohmann::to_string(message);
+     
+}
+
+std::string ChatRoomScreen::Message::ToJstonString()
+{
+    nlohmann::json message;
+    message["type"] = "MESSAGE";
+    message["user"] = m_user;
+    message["content"] = m_content;
+    message["timestamp"] = m_timestamp;
+
+
+    return nlohmann::to_string(message);
+
 }

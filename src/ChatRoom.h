@@ -19,6 +19,10 @@ struct ChatRoomScreen : BaseScreen {
 		const std::string m_content;
 		const std::string m_user;
 		int64_t m_timestamp;
+		Message(const std::string _user, const std::string _content, int64_t _timestamp) :m_content(_content), m_user(_user), m_timestamp(_timestamp) {}
+
+		static std::string WriteJsonMessage(const std::string _user, const std::string _content, int64_t _timestamp);
+		std::string ToJstonString();
 	};
 
 	std::vector<Message> m_messageHistory;

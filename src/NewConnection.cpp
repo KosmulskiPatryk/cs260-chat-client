@@ -30,6 +30,7 @@ NewConnectionScreen::NewConnectionScreen() {
 
         if (!ConnectionManager::m_running) {
 		    // TODO: Connect to the IP and port
+            
         }
 		
         // capture the name now; we need it to build the token once the server
@@ -37,15 +38,37 @@ NewConnectionScreen::NewConnectionScreen() {
         this->m_pendingName = Trim(this->m_nameInput.m_content);
 
         // TODO: create step 1 of the handshake: a LOGIN message
+        nlohmann::json message;
+        message["type"] = "LOGIN";
+        const std::string stringMsg = nlohmann::to_string(message);
+        
         // TODO: send the login message
+        ConnectionManager::Send(stringMsg);
     };
+
 }
 
 void NewConnectionScreen::PacketHandler(const nlohmann::json& packet) {
+    if (packet.empty())return;
     const std::string& packetType = packet["type"];
     // TODO: handle incoming messages here
     // see documentation for the incoming message types and what to do with them
-    if (packetType == "ERROR") {
+    if (packetType == "AUTHENTICATE") {
+        std::string nonce = packet["nonce"];
+        nlohmann::json message;
+        message["type"] = "CONNECT";
+        message["name"] = m_pendingName;
+        std::string secret = ConnectionManager::GetSecret();
+        message["token"] = sha256_hex(m_pendingName+secret+nonce);
+        std::string messageStr = nlohmann::to_string(message);
+        ConnectionManager::Send(messageStr);
+        ConnectionManager::SetUserName(m_pendingName);
+    }
+    else if (packetType == "HELLO") {
+        BaseScreen::CurrentScreen = 1;
+    }
+
+    else if (packetType == "ERROR") {
         TraceLog(LOG_ERROR, packet["reason"].get<std::string>().c_str());
         this->m_errorAlert.Push(packet["reason"]);
     }
@@ -53,7 +76,11 @@ void NewConnectionScreen::PacketHandler(const nlohmann::json& packet) {
 
 void NewConnectionScreen::Update(float dt) {
     // TODO: poll for incoming messages, parse and send to PacketHandler()
-
+    std::string incomingJsonStr = ConnectionManager::Poll().value_or("");
+    if (!incomingJsonStr.empty()) {
+        nlohmann::json incoming = nlohmann::json::parse(incomingJsonStr);
+        PacketHandler(incoming);
+    }
    
     if (this->m_nameInput.m_focused) {
         if (IsKeyPressed(KEY_ENTER) && !this->m_nameInput.m_content.empty()) {

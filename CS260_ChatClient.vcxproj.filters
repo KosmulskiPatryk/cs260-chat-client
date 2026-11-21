@@ -48,9 +48,6 @@
     <ClCompile Include="src\helpers.cpp">
       <Filter>Source Files\UI</Filter>
     </ClCompile>
-    <ClCompile Include="src\Socket.cpp">
-      <Filter>Source Files\Network</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\pch.h">
@@ -88,9 +85,6 @@
     </ClInclude>
     <ClInclude Include="src\helpers.h">
       <Filter>Source Files\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Socket.h">
-      <Filter>Source Files\Network</Filter>
     </ClInclude>
     <ClInclude Include="src\color.h">
       <Filter>Source Files\UI</Filter>

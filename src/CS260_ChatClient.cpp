@@ -25,30 +25,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-
-    //const char* in_port = argv[1];
-
-    //bool valid = true;
-    //for (int i = 0; i < static_cast<int>(strlen(in_port)); ++i) {
-    //    if (isalpha(in_port[i])) {
-    //        valid = false;
-    //        break;
-    //    }
-    //}
-    //if (!valid) {
-    //    std::cout << "Port was invalid (contained alphabetic characters), please try again..." << std::endl;
-    //    return 1;
-    //}
-
-    //int port = 0;
-    //port = std::stoi(in_port);
-    //if (port < 1 || port > 65535) {
-    //    std::cout << "Port is not within threshold 0 -> 65535. Please try again..." << std::endl;
-    //    return 1;
-
-    //}
-    //else std::cout << "Listening on port " << port << std::endl;
-
+    ConnectionManager::Init();
     // TODO: get the IP address, verify it is valid
     std::string in_ip(argv[1]);
     if (!ConnectionManager::ValidateIP(in_ip))return 1;
@@ -63,6 +40,7 @@ int main(int argc, char* argv[]) {
     
     // TODO: set the ip, port, and token in the ConnectionManager
     ConnectionManager::Connect(in_ip, in_port);
+    ConnectionManager::SetSecret(in_token);
 
     // Window and renderer setup
     const int screenWidth = 1280;
