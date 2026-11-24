@@ -54,16 +54,12 @@ void ChatRoomScreen::PacketHandler(const nlohmann::json& packet) {
         m_connectedUsers = packet["users"];
     }
     else if (packetType == "MESSAGE_HISTORY") {
-        if (packet["messages"].is_array()) {
-            int size = packet["messages"].size();
-            for (int i = 0; i < size; ++i) {
-                const std::string user = packet["messages"][i]["user"];
-                const std::string content = packet["messages"][i]["content"];
-                int64_t timestamp = packet["messages"][i]["timestamp"];
-                Message msg(user,content,timestamp);
-                m_messageHistory.push_back(msg);
-
-            }
+        for (const nlohmann::json& element : packet["messages"]) {
+            const std::string user = element["user"];
+            const std::string content = element["content"];
+            int64_t timestamp = element["timestamp"];
+            Message msg(user, content, timestamp);
+            m_messageHistory.push_back(msg);
         }
     }
     else if (packetType == "PING") {
@@ -79,7 +75,7 @@ void ChatRoomScreen::PacketHandler(const nlohmann::json& packet) {
 }
 
 void ChatRoomScreen::Update(float dt) {
-    // TODO: use ConnectionManager to poll for incoming messages
+    // Use ConnectionManager to poll for incoming messages
 	// For all received, parse the json and send to PacketHandler for handling
 
     std::string incomingJsonStr = ConnectionManager::Poll().value_or("");

@@ -16,10 +16,6 @@ struct ConnectionManager {
 	inline static std::atomic<bool> m_running = false;
 
 	static std::string m_recvBuffer;
-	//static std::string secret;
-	//static SOCKET sock;
-	//static sockaddr_in addr;
-
 
 	static void Connect(const std::string& ip, int port);
 	static void Connect();
@@ -29,18 +25,18 @@ struct ConnectionManager {
 	static bool Init();
 	static void Exit();
 
-	static bool ValidatePort(int port);
+	static bool ValidatePort(std::string port);
 	static bool ValidateIP(const std::string ip);
-	static void SetSecret(const std::string secret);
-
-	//<------- Getters and Setters
-
-	static std::string GetSecret();
+	static void RecvLoop();
 	static std::optional<std::string> Poll();
+
+	//<------- Getters and Setters------->
+
+	static void SetSecret(const std::string secret);
+	static std::string GetSecret();
 	static void SetUserName(const std::string user);
 	static std::string GetUser();
 
-	static void RecvLoop();
 
 
 

@@ -51,8 +51,6 @@ NewConnectionScreen::NewConnectionScreen() {
 void NewConnectionScreen::PacketHandler(const nlohmann::json& packet) {
     if (packet.empty())return;
     const std::string& packetType = packet["type"];
-    // TODO: handle incoming messages here
-    // see documentation for the incoming message types and what to do with them
     if (packetType == "AUTHENTICATE") {
         std::string nonce = packet["nonce"];
         nlohmann::json message;

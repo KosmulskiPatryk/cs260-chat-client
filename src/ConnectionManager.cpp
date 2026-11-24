@@ -13,6 +13,8 @@ std::queue<std::string> ConnectionManager::m_recvQueue;
 
 std::string ConnectionManager::m_recvBuffer;
 
+
+//<---- Local variables that aren't static
 SOCKET sock;
 sockaddr_in addr;
 std::string m_secret;
@@ -60,18 +62,16 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 
 	m_ip = ip;m_port = port;
 
-    // TODO: create a TCP socket
+    //Create a TCP socket
 	sock = socket(AF_INET,	SOCK_STREAM, IPPROTO_TCP);
 	if (sock == INVALID_SOCKET) {
 		GetError("socket");
-		Disconnect();
 		return;
 	}
 
-	// TODO: set the socket address to ip, port
-		//Create the sockaddr
+	// Set the socket address to ip, port
 	memset(addr.sin_zero, 0, sizeof(addr.sin_zero));
-	addr.sin_family = AF_INET;	/*Address family*/
+	addr.sin_family = AF_INET;		/*Address family*/
 	addr.sin_port = htons(port);	/*The Host->Network port in the type: short*/
 
 	//Converts IPv4 to its binary form
@@ -84,7 +84,6 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 		hint.ai_family = AF_INET;
 		result = getaddrinfo(ip.c_str(), nullptr, &hint, &pAddr);
 		if (result != 0) {
-			Disconnect();
 			return;
 		}
 		else {
@@ -93,35 +92,26 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 		}
 	}
 	
-	//TODO: make the socket non-blocking
+	//Make the socket non-blocking
 	u_long mode = 1;
 	int err = ioctlsocket(sock,FIONBIO,&mode);
 	if (err != 0) {
 		GetError("ioctlsocket");
-		Disconnect();
 		return;
 	}
 
-	// TODO: connect to the server, don't forget to verify all return values for success!
-	//while (true) {
+	//Connect to the server, don't forget to verify all return values for success!
 	int res = connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
 	if (res == SOCKET_ERROR) {
 		int err = GetError("connect");
 		if (err == 1) {
-			//continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		//else if (err == 2) {
-		//	return;
-		//}
-		else Disconnect();
+		else return;
 	}
-	//else {
-	//	//break;
-	//}
-
-	//}
+	//Start the running loop
 	m_running = true;
+
 	// create a thread that will run ConnectionManager::RecvLoop and detach it
 	m_recvThread = std::thread(&ConnectionManager::RecvLoop);
 	if (m_recvThread.joinable()) m_recvThread.detach();
@@ -140,13 +130,13 @@ void ConnectionManager::Disconnect() {
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		// TODO: flush anything still queued, then send a graceful DISCONNECT so the
+		// Flush anything still queued, then send a graceful DISCONNECT so the
 		// server doesn't log us as a protocol violator for closing the socket
 		// without notice. Sent synchronously (under the lock, so it can't race
 		// the RecvLoop's own draining) to guarantee it goes out before we stop.
 		
 
-		// TODO: create a DISCONNECT message and send it
+		// Create a DISCONNECT message and send it
 		nlohmann::json message;
 		message["type"] = "DISCONNECT";
 
@@ -158,8 +148,8 @@ void ConnectionManager::Disconnect() {
 			while (true) {
 				int byteSent = send(
 					sock,								/*The Socket to send from*/
-					msg.c_str(),					/*The message to send*/
-					static_cast<int>(msg.size()),	/*The length of out message*/
+					msg.c_str(),						/*The message to send*/
+					static_cast<int>(msg.size()),		/*The length of out message*/
 					0									/*Any flags, currently 0*/
 				);
 				if (byteSent == SOCKET_ERROR) {
@@ -175,7 +165,7 @@ void ConnectionManager::Disconnect() {
 			m_recvQueue.pop();
 		}
 		
-		
+		//Close the socket
 		int result = closesocket(sock);
 		if (result != 0) {
 			GetError("closesocket");
@@ -192,19 +182,19 @@ void ConnectionManager::Send(const std::string& message) {
 	m_sendQueue.push(message);
 }
 
-bool ConnectionManager::ValidatePort(int port)
+bool ConnectionManager::ValidatePort(std::string port)
 {
-	std::string str_port = std::to_string(port);
-	for (int i = 0; i < static_cast<int>(str_port.size()); ++i) {
-		if (isalpha(str_port[i])) {
+	for (int i = 0; i < static_cast<int>(port.size()); ++i) {
+		if (isalpha(port[i])) {
 			return false;
 		}
 	}
-	if (port < 1 || port > 65535) {
+	int int_port = std::stoi(port);
+	if (int_port < 1 || int_port > 65535) {
 		return false;
 
 	}
-	m_port = port;
+	m_port = int_port;
 	return true;
 }
 
@@ -217,7 +207,6 @@ bool ConnectionManager::ValidateIP(const std::string ip)
 	int result = getaddrinfo(ip.c_str(), nullptr, &hint, &pAddr);
 	if (result != 0) {
 		GetError("getaddrinfo");
-		Disconnect();
 		return false;
 	}
 	

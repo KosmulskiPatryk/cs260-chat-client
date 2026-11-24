@@ -19,27 +19,32 @@ void HandleClayErrors(Clay_ErrorData errorData) {
 }
 
 int main(int argc, char* argv[]) {
-    // TODO: verify correct and valid arguments
+    //Verify correct and valid arguments
     if (argc != 4) {
         std::cerr << "Usage: " << argv[0] << " <ip> <port> <token>" << std::endl;
         return 1;
     }
-
+    //Initialize the Connection manager
     ConnectionManager::Init();
-    // TODO: get the IP address, verify it is valid
+    //Get the IP address, verify it is valid
     std::string in_ip(argv[1]);
-    if (!ConnectionManager::ValidateIP(in_ip))return 1;
+    if (!ConnectionManager::ValidateIP(in_ip)) {
+        std::cerr << in_ip<<" is not a valid IP" << std::endl;
+        ConnectionManager::Exit();//Close winsock
+        return 1;
+    }
 
-    // TODO: get port, verify it is valid
-    int in_port = std::stoi(argv[2]);
-    if (!ConnectionManager::ValidatePort(in_port))return 1;
+    //Get port, verify it is valid
+    if (!ConnectionManager::ValidatePort(argv[2])) {
+        std::cerr << argv[2] << " is not a valid port" << std::endl;
+        ConnectionManager::Exit();//Close winsock
+        return 1;
+    }
 
-
-    // TODO: get token
+    //Get token
     std::string in_token(argv[3]);
-    
-    // TODO: set the ip, port, and token in the ConnectionManager
-    //ConnectionManager::Connect(in_ip, in_port);
+  
+    // Set the ip, port, and token in the ConnectionManager
     ConnectionManager::SetSecret(in_token);
 
 
@@ -127,7 +132,7 @@ int main(int argc, char* argv[]) {
    
     // leave the chat gracefully before tearing down the socket
     ConnectionManager::Disconnect();
-    ConnectionManager::Exit();
+    ConnectionManager::Exit();//Close winsock
     UnloadFont(font);
     CloseWindow();
 
