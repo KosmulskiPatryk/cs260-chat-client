@@ -46,6 +46,16 @@ bool ConnectionManager::Init() {
 
 }
 
+void ConnectionManager::Exit()
+{
+	int result = WSACleanup();
+	if (result != 0) {
+		GetError("WSACleanup");
+		return;
+	}
+	return;
+}
+
 void ConnectionManager::Connect(const std::string& ip, int port) {
 
 	m_ip = ip;m_port = port;
@@ -54,6 +64,7 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 	sock = socket(AF_INET,	SOCK_STREAM, IPPROTO_TCP);
 	if (sock == INVALID_SOCKET) {
 		GetError("socket");
+		Disconnect();
 		return;
 	}
 
@@ -73,6 +84,7 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 		hint.ai_family = AF_INET;
 		result = getaddrinfo(ip.c_str(), nullptr, &hint, &pAddr);
 		if (result != 0) {
+			Disconnect();
 			return;
 		}
 		else {
@@ -86,28 +98,29 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 	int err = ioctlsocket(sock,FIONBIO,&mode);
 	if (err != 0) {
 		GetError("ioctlsocket");
+		Disconnect();
 		return;
 	}
 
 	// TODO: connect to the server, don't forget to verify all return values for success!
-	while (true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		int res = connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-		if (res == SOCKET_ERROR) {
-			int err = GetError("connect");
-			if (err == 1) {
-				continue;
-			}
-			else if (err == 2) {
-				break;
-			}
-			else return;
+	//while (true) {
+	int res = connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+	if (res == SOCKET_ERROR) {
+		int err = GetError("connect");
+		if (err == 1) {
+			//continue;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		else {
-			break;
-		}
-
+		//else if (err == 2) {
+		//	return;
+		//}
+		else Disconnect();
 	}
+	//else {
+	//	//break;
+	//}
+
+	//}
 	m_running = true;
 	// create a thread that will run ConnectionManager::RecvLoop and detach it
 	m_recvThread = std::thread(&ConnectionManager::RecvLoop);
@@ -131,11 +144,45 @@ void ConnectionManager::Disconnect() {
 		// server doesn't log us as a protocol violator for closing the socket
 		// without notice. Sent synchronously (under the lock, so it can't race
 		// the RecvLoop's own draining) to guarantee it goes out before we stop.
+		
 
 		// TODO: create a DISCONNECT message and send it
+		nlohmann::json message;
+		message["type"] = "DISCONNECT";
 
+		m_sendQueue.push(nlohmann::to_string(message));
+		
+		while (!m_sendQueue.empty()) {
+			std::string msg = m_sendQueue.front();
+			m_sendQueue.pop();
+			while (true) {
+				int byteSent = send(
+					sock,								/*The Socket to send from*/
+					msg.c_str(),					/*The message to send*/
+					static_cast<int>(msg.size()),	/*The length of out message*/
+					0									/*Any flags, currently 0*/
+				);
+				if (byteSent == SOCKET_ERROR) {
+					GetError("send");
+					return;
+				}
+				else if (byteSent <= static_cast<int>(msg.size()))
+					break;
+			}
+
+		}
+		while (!m_recvQueue.empty()) {
+			m_recvQueue.pop();
+		}
+		
+		
+		int result = closesocket(sock);
+		if (result != 0) {
+			GetError("closesocket");
+			return;
+		}
 	}
-
+	
 	// stop the receive loop
 	m_running = false;
 }
@@ -170,6 +217,7 @@ bool ConnectionManager::ValidateIP(const std::string ip)
 	int result = getaddrinfo(ip.c_str(), nullptr, &hint, &pAddr);
 	if (result != 0) {
 		GetError("getaddrinfo");
+		Disconnect();
 		return false;
 	}
 	
@@ -193,7 +241,6 @@ std::optional<std::string> ConnectionManager::Poll() {
     // TODO: return the next message in the queue
 	std::string msg = m_recvQueue.front();
 	m_recvQueue.pop();
-	//m_recvBuffer.clear();
 	return msg;
 }
 
@@ -225,7 +272,8 @@ void ConnectionManager::RecvLoop() {
 					);
 					if (byteSent == SOCKET_ERROR) {
 						GetError("send");
-						break;
+						Disconnect();
+						//return;
 					}
 					else if (byteSent <= static_cast<int>(msg.size()))
 						break;
@@ -248,7 +296,7 @@ void ConnectionManager::RecvLoop() {
 			int err = GetError("receive");
 			if (err != 1) {
 				Disconnect();
-				return;
+				//return;
 			}
 		}
 		else if (bytes == 0)

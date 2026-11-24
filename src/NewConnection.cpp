@@ -71,6 +71,7 @@ void NewConnectionScreen::PacketHandler(const nlohmann::json& packet) {
     else if (packetType == "ERROR") {
         TraceLog(LOG_ERROR, packet["reason"].get<std::string>().c_str());
         this->m_errorAlert.Push(packet["reason"]);
+        ConnectionManager::Disconnect();
     }
 }
 

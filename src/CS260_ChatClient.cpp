@@ -124,12 +124,13 @@ int main(int argc, char* argv[]) {
 
         ClayStringHelpers::ClearBuffers();
     }
-
+   
     // leave the chat gracefully before tearing down the socket
     ConnectionManager::Disconnect();
-
+    ConnectionManager::Exit();
     UnloadFont(font);
     CloseWindow();
+
     free(clayMemory.memory);
     return 0;
 }

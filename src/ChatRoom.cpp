@@ -73,6 +73,8 @@ void ChatRoomScreen::PacketHandler(const nlohmann::json& packet) {
     }
     else if (packetType == "ERROR") {
             this->m_errorAlert.Push(packet["reason"]);
+            ConnectionManager::Disconnect();
+
     }
 }
 

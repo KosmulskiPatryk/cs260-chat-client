@@ -27,6 +27,7 @@ struct ConnectionManager {
 	static void Send(const std::string& message);
 
 	static bool Init();
+	static void Exit();
 
 	static bool ValidatePort(int port);
 	static bool ValidateIP(const std::string ip);
