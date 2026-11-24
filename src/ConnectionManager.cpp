@@ -17,6 +17,8 @@ SOCKET sock;
 sockaddr_in addr;
 std::string m_secret;
 std::string m_user;
+std::string m_ip;
+int m_port;
 
 
 #define BUF_LEN 1400
@@ -45,6 +47,9 @@ bool ConnectionManager::Init() {
 }
 
 void ConnectionManager::Connect(const std::string& ip, int port) {
+
+	m_ip = ip;m_port = port;
+
     // TODO: create a TCP socket
 	sock = socket(AF_INET,	SOCK_STREAM, IPPROTO_TCP);
 	if (sock == INVALID_SOCKET) {
@@ -109,6 +114,13 @@ void ConnectionManager::Connect(const std::string& ip, int port) {
 	if (m_recvThread.joinable()) m_recvThread.detach();
 }
 
+void ConnectionManager::Connect()
+{
+	Connect(m_ip,m_port);
+}
+
+
+
 void ConnectionManager::Disconnect() {
 	if (!m_running) return;
 
@@ -145,6 +157,7 @@ bool ConnectionManager::ValidatePort(int port)
 		return false;
 
 	}
+	m_port = port;
 	return true;
 }
 
@@ -159,9 +172,9 @@ bool ConnectionManager::ValidateIP(const std::string ip)
 		GetError("getaddrinfo");
 		return false;
 	}
-	else {
-		return true;
-	}
+	
+	m_ip = ip;
+	return true;
 }
 
 void ConnectionManager::SetSecret(const std::string secret)
@@ -247,7 +260,7 @@ void ConnectionManager::RecvLoop() {
 			
 			while (std::getline(ss, msg) && !ss.eof()) {
 				m_recvQueue.push(msg);
-				auto it = m_recvBuffer.find(msg);
+				size_t it = m_recvBuffer.find(msg);
 				if(it != m_recvBuffer.npos)
 					m_recvBuffer.erase(it,msg.size()+1);
 				

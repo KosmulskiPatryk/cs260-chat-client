@@ -39,8 +39,11 @@ int main(int argc, char* argv[]) {
     std::string in_token(argv[3]);
     
     // TODO: set the ip, port, and token in the ConnectionManager
-    ConnectionManager::Connect(in_ip, in_port);
+    //ConnectionManager::Connect(in_ip, in_port);
     ConnectionManager::SetSecret(in_token);
+
+
+
 
     // Window and renderer setup
     const int screenWidth = 1280;

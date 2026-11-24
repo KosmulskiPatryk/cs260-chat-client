@@ -22,6 +22,7 @@ struct ConnectionManager {
 
 
 	static void Connect(const std::string& ip, int port);
+	static void Connect();
 	static void Disconnect();
 	static void Send(const std::string& message);
 
@@ -30,6 +31,9 @@ struct ConnectionManager {
 	static bool ValidatePort(int port);
 	static bool ValidateIP(const std::string ip);
 	static void SetSecret(const std::string secret);
+
+	//<------- Getters and Setters
+
 	static std::string GetSecret();
 	static std::optional<std::string> Poll();
 	static void SetUserName(const std::string user);

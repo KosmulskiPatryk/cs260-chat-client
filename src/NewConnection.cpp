@@ -30,7 +30,7 @@ NewConnectionScreen::NewConnectionScreen() {
 
         if (!ConnectionManager::m_running) {
 		    // TODO: Connect to the IP and port
-            
+            ConnectionManager::Connect();
         }
 		
         // capture the name now; we need it to build the token once the server

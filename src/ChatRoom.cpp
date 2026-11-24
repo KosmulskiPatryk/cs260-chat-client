@@ -3,7 +3,7 @@
 #include "clay.h"
 #include <string>
 #include "ConnectionManager.h"
-#include <chrono>
+//#include <chrono>
 
 ChatRoomScreen::ChatRoomScreen() {
     this->m_messageInput.m_placeholder = "Enter your message...";
@@ -24,7 +24,6 @@ ChatRoomScreen::ChatRoomScreen() {
             std::chrono::system_clock::now().time_since_epoch()).count();
 
         Message msg(user, content, timestamp);
-        m_messageHistory.push_back(msg);
         // TODO: send the message using ConnectionManager::Send
         ConnectionManager::Send(msg.ToJstonString());
 		// reset the text input
@@ -72,7 +71,6 @@ void ChatRoomScreen::PacketHandler(const nlohmann::json& packet) {
         message["type"] = "PONG";
         ConnectionManager::Send(nlohmann::to_string(message));
     }
-
     else if (packetType == "ERROR") {
             this->m_errorAlert.Push(packet["reason"]);
     }
@@ -351,7 +349,7 @@ std::string ChatRoomScreen::Message::WriteJsonMessage(const std::string _user, c
 std::string ChatRoomScreen::Message::ToJstonString()
 {
     nlohmann::json message;
-    message["type"] = "MESSAGE";
+    message["type"] = "CHAT";
     message["user"] = m_user;
     message["content"] = m_content;
     message["timestamp"] = m_timestamp;
