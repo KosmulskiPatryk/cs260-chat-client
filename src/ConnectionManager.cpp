@@ -297,6 +297,7 @@ void ConnectionManager::RecvLoop() {
 			
 			while (std::getline(ss, msg) && !ss.eof()) {
 				m_recvQueue.push(msg);
+
 				size_t it = m_recvBuffer.find(msg);
 				if(it != m_recvBuffer.npos)
 					m_recvBuffer.erase(it,msg.size()+1);

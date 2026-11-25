@@ -79,6 +79,7 @@ void NewConnectionScreen::Update(float dt) {
     if (!incomingJsonStr.empty()) {
         nlohmann::json incoming = nlohmann::json::parse(incomingJsonStr);
         PacketHandler(incoming);
+        TraceLog(LOG_INFO, incomingJsonStr.c_str());
     }
    
     if (this->m_nameInput.m_focused) {

@@ -82,6 +82,7 @@ void ChatRoomScreen::Update(float dt) {
     if (!incomingJsonStr.empty()) {
         nlohmann::json incoming = nlohmann::json::parse(incomingJsonStr);
         PacketHandler(incoming);
+        TraceLog(LOG_INFO, incomingJsonStr.c_str());
     }
 
 
